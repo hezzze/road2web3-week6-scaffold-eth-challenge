@@ -68,8 +68,8 @@ const scaffoldEthProvider = navigator.onLine
   : null;
 const poktMainnetProvider = navigator.onLine
   ? new ethers.providers.StaticJsonRpcProvider(
-      "https://eth-mainnet.gateway.pokt.network/v1/lb/611156b4a585a20035148406",
-    )
+    "https://eth-mainnet.gateway.pokt.network/v1/lb/611156b4a585a20035148406",
+  )
   : null;
 const mainnetInfura = navigator.onLine
   ? new ethers.providers.StaticJsonRpcProvider("https://mainnet.infura.io/v3/" + INFURA_ID)
@@ -164,12 +164,16 @@ const web3Modal = new Web3Modal({
 });
 
 function App(props) {
-  const mainnetProvider =
-    poktMainnetProvider && poktMainnetProvider._isProvider
-      ? poktMainnetProvider
-      : scaffoldEthProvider && scaffoldEthProvider._network
-      ? scaffoldEthProvider
-      : mainnetInfura;
+  // const mainnetProvider =
+  //   poktMainnetProvider && poktMainnetProvider._isProvider
+  //     ? poktMainnetProvider
+  //     : scaffoldEthProvider && scaffoldEthProvider._network
+  //       ? scaffoldEthProvider
+  //       : mainnetInfura;
+
+  const mainnetProvider = mainnetInfura;
+
+  console.log("provider is: ", mainnetProvider);
 
   const [injectedProvider, setInjectedProvider] = useState();
   const [address, setAddress] = useState();
@@ -252,6 +256,9 @@ function App(props) {
   );
   if (DEBUG) console.log("💵 stakerContractBalance", stakerContractBalance);
 
+  const rewardRatePerSecond = useContractReader(readContracts, "Staker", "rewardRatePerSecond");
+  console.log("💵 Reward Rate:", rewardRatePerSecond);
+
   // ** keep track of total 'threshold' needed of ETH
   const threshold = useContractReader(readContracts, "Staker", "threshold");
   console.log("💵 threshold:", threshold);
@@ -287,6 +294,14 @@ function App(props) {
       </div>
     );
   }
+
+
+  // ** keep track of a variable from the contract in the local React state:
+  const claimPeriodLeft = useContractReader(readContracts, "Staker", "claimPeriodLeft");
+  console.log("⏳ Claim Period Left:", claimPeriodLeft);
+
+  const withdrawalTimeLeft = useContractReader(readContracts, "Staker", "withdrawalTimeLeft");
+  console.log("⏳ Withdrawal Time Left:", withdrawalTimeLeft);
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -516,18 +531,28 @@ function App(props) {
               <Address value={readContracts && readContracts.Staker && readContracts.Staker.address} />
             </div>
 
-            <div style={{ padding: 8, marginTop: 32 }}>
-              <div>Timeleft:</div>
-              {timeLeft && humanizeDuration(timeLeft.toNumber() * 1000)}
+            <div style={{ padding: 8, marginTop: 16 }}>
+              <div>Reward Rate Per Second:</div>
+              <Balance balance={rewardRatePerSecond} fontSize={64} /> ETH
+            </div>
+
+            <div style={{ padding: 8, marginTop: 16, fontWeight: "bold" }}>
+              <div>Claim Period Left:</div>
+              {claimPeriodLeft && humanizeDuration(claimPeriodLeft.toNumber() * 1000)}
+            </div>
+
+            <div style={{ padding: 8, marginTop: 16, fontWeight: "bold" }}>
+              <div>Withdrawal Period Left:</div>
+              {withdrawalTimeLeft && humanizeDuration(withdrawalTimeLeft.toNumber() * 1000)}
             </div>
 
             <div style={{ padding: 8 }}>
-              <div>Total staked:</div>
+              <div>Total available ETH in Contract:</div>
               <Balance balance={stakerContractBalance} fontSize={64} />/<Balance balance={threshold} fontSize={64} />
             </div>
 
             <div style={{ padding: 8 }}>
-              <div>You staked:</div>
+              <div>ETH Locked in Staker Contract</div>
               <Balance balance={balanceStaked} fontSize={64} />
             </div>
 
@@ -561,6 +586,18 @@ function App(props) {
                 }}
               >
                 🥩 Stake 0.5 ether!
+              </Button>
+            </div>
+
+
+            <div style={{ padding: 8 }}>
+              <Button
+                type={balanceStaked ? "success" : "primary"}
+                onClick={() => {
+                  tx(writeContracts.ExampleExternalContract.externalReStake());
+                }}
+              >
+                🎅 Restake
               </Button>
             </div>
 
